@@ -9,30 +9,42 @@ body {
 
 .App {
   text-align: center;
-  margin-top: 50px;
+  margin: 20px;
 }
 
 h1 {
   color: #333;
 }
 
-div {
-  margin-bottom: 20px;
+button {
+  padding: 10px;
+  margin: 5px;
+  cursor: pointer;
+}
+
+form {
+  margin-top: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
 }
 
 input {
   padding: 8px;
-  margin-right: 10px;
+  margin-bottom: 10px;
+  width: 100%;
 }
 
-button {
+pre {
+  background-color: #f9f9f9;
   padding: 10px;
-  cursor: pointer;
-  background-color: #4caf50;
-  color: white;
-  border: none;
+  border: 1px solid #ddd;
+  overflow: auto;
+  max-width: 600px;
+  margin: 20px auto;
 }
 
-button:hover {
-  background-color: #45a049;
-}
+/* Add more styles as needed */

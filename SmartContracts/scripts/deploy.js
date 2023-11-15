@@ -1,20 +1,19 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  // Compile the contract
-  const IdentityManagement = await ethers.getContractFactory("IdentityManagement");
-  
-  // Deploy the contract
-  const identityManagement = await IdentityManagement.deploy();
-  await identityManagement.deployed();
+  const [deployer] = await ethers.getSigners();
 
-  console.log("IdentityManagement contract deployed to:", identityManagement.address);
+  console.log("Deploying contracts with the account:", deployer.address);
+
+  const IdentityManagement = await ethers.getContractFactory("IdentityManagement");
+  const identityManagement = await IdentityManagement.deploy();
+
+  console.log("IdentityManagement deployed to:", identityManagement.address);
 }
 
-// Run the deployment script
 main()
   .then(() => process.exit(0))
-  .catch(error => {
+  .catch((error) => {
     console.error(error);
     process.exit(1);
   });

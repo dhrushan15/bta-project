@@ -1,111 +1,181 @@
-// Import necessary libraries
 import React, { useState, useEffect } from 'react';
-import Web3 from 'web3';
-import IdentityManagementABI from './contract/IdentityManagement.json'; 
+import { ethers } from 'ethers';
 import './App.css';
+import ContractABI from './contract/IdentityManagement.json';
 
-function App() {
-  const contractAddress = '0x6151D9b356D725F4a3Ce1584b837E1675A9c1213';
-  const web3 = new Web3(Web3.givenProvider || 'http://localhost:3000'); 
-
+const App = () => {
   const [contract, setContract] = useState(null);
-  const [accounts, setAccounts] = useState([]);
-  const [identityId, setIdentityId] = useState('');
-  const [username, setUsername] = useState('');
-  const [publicKey, setPublicKey] = useState('');
+  const [connectedWallet, setConnectedWallet] = useState(null);
+  const [identityDetails, setIdentityDetails] = useState(null);
+
+  const [newIdentity, setNewIdentity] = useState({
+    username: '',
+    publicKey: '',
+    email: '',
+    dateOfBirth: '',
+  });
+
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
 
   useEffect(() => {
-    async function init() {
-      try {
-        if (window.ethereum) {
-          const web3 = new Web3(window.ethereum);
+    let isMounted = true;
 
-          document.getElementById('connectButton').addEventListener('click', async () => {
-            try {
-              await window.ethereum.enable(); 
-              const contract = new web3.eth.Contract(IdentityManagementABI, '0x6151D9b356D725F4a3Ce1584b837E1675A9c1213'); // Replace with the actual contract address
-              setContract(contract);
-              const accounts = await web3.eth.getAccounts();
-              setAccounts(accounts);
-            } catch (error) {
-              console.error('Error connecting to MetaMask', error);
-            }
-          });
-        } else {
-          console.error('MetaMask not detected. Please install MetaMask and reload the page.');
+    const initializeContract = async () => {
+      if (window.ethereum) {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+        const signer = provider.getSigner();
+
+        const contractAddress = '0x9b50dfd6996Ed6D45fb4D99cEbad3882f7a0f5A5';
+        const contractAbi = ContractABI.abi;
+
+        const identityContract = new ethers.Contract(contractAddress, contractAbi, signer);
+
+        if (isMounted) {
+          setContract(identityContract);
+
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            setConnectedWallet(accounts[0]);
+          }
         }
-      } catch (error) {
-        console.error('Error initializing web3', error);
       }
-    }
+    };
 
-    init();
-  }, []);
+    initializeContract();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array for one-time initialization
+
+  const connectWallet = async () => {
+    try {
+      if (window.ethereum) {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          setConnectedWallet(accounts[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error connecting wallet:', error.message);
+    }
+  };
+  
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewIdentity((prevIdentity) => ({
+      ...prevIdentity,
+      [name]: value,
+    }));
+  };
 
   const createIdentity = async () => {
     try {
-       // Call the createIdentity function on the contract
-       const transaction = await contract.methods.createIdentity(username, publicKey).send({ from: accounts[0] });
- 
-       console.log('Transaction Receipt:', transaction);
- 
-       // Check if the IdentityCreated event is present
-       if (transaction.events && transaction.events.IdentityCreated) {
-          const identityId = transaction.events.IdentityCreated.returnValues.id;
-          console.log('Identity created successfully! Identity ID:', identityId);
-          setIdentityId(identityId);
-       } else {
-          console.error('IdentityCreated event not found in the transaction receipt.');
-       }
-    } catch (error) {
-       console.error('Error creating identity', error);
-    }
- };
- 
+      const { username, publicKey, email, dateOfBirth } = newIdentity;
+      const gasLimit = 800000; // Adjust this value as needed
+      const gasPrice = await provider.getGasPrice();
 
-  const verifyIdentity = async () => {
-    try {
-      // Call the verifyIdentity function on the contract
-      await contract.methods.verifyIdentity(identityId).send({ from: accounts[0] });
+      const txCreate = await contract.createIdentity(username, publicKey, email, dateOfBirth, {
+        gasLimit,
+        gasPrice,
+      });
+      const receipt = await txCreate.wait();
+
+      // Log transaction details
+      console.log('Transaction Receipt:', receipt);
+
+      const identityId = receipt.events.find((event) => event.event === 'IdentityCreated').args.id.toNumber();
+
+      const createdIdentity = await contract.getIdentityDetails(identityId);
+
+      // Log the created identity details
+      console.log('Identity Created:', createdIdentity);
+
+      alert('Identity created!');
     } catch (error) {
-      console.error('Error verifying identity', error);
     }
   };
 
   const getIdentityDetails = async () => {
     try {
-      // Call the getIdentityDetails function on the contract
-      const details = await contract.methods.getIdentityDetails(identityId).call();
-      console.log('Identity Details:', details);
+      const details = await contract.getIdentityDetails(1); // Assuming identity with ID 1 exists
+      setIdentityDetails(details);
     } catch (error) {
-      console.error('Error getting identity details', error);
+      console.error('Error getting identity details:', error.message);
     }
   };
 
   return (
-
-    
     <div className="App">
-      <h1>Ethereum Identity Management</h1>
-      <button id="connectButton">Connect to Wallet</button>
-      <div>
-        <h2>Create Identity</h2>
-        <input type="text" placeholder="Username" onChange={(e) => setUsername(e.target.value)} />
-        <input type="text" placeholder="Public Key" onChange={(e) => setPublicKey(e.target.value)} />
-        <button onClick={createIdentity}>Create Identity</button>
-      </div>
-      <div>
-        <h2>Verify Identity</h2>
-        <input type="text" placeholder="Identity ID" onChange={(e) => setIdentityId(e.target.value)} />
-        <button onClick={verifyIdentity}>Verify Identity</button>
-      </div>
-      <div>
-        <h2>Get Identity Details</h2>
-        <input type="text" placeholder="Identity ID" onChange={(e) => setIdentityId(e.target.value)} />
-        <button onClick={getIdentityDetails}>Get Identity Details</button>
-      </div>
+      <h1>Identity Management DApp</h1>
+      {!connectedWallet ? (
+        <button onClick={connectWallet}>Connect to Wallet</button>
+      ) : (
+        <div>
+          <p>Connected Wallet: {connectedWallet}</p>
+
+          {/* New Identity Form */}
+          <form>
+            <label>
+              Username:
+              <input
+                type="text"
+                name="username"
+                value={newIdentity.username}
+                onChange={handleInputChange}
+              />
+            </label>
+            <br />
+            <label>
+              Public Key:
+              <input
+                type="text"
+                name="publicKey"
+                value={newIdentity.publicKey}
+                onChange={handleInputChange}
+              />
+            </label>
+            <br />
+            <label>
+              Email:
+              <input
+                type="text"
+                name="email"
+                value={newIdentity.email}
+                onChange={handleInputChange}
+              />
+            </label>
+            <br />
+            <label>
+              Date of Birth:
+              <input
+                type="text"
+                name="dateOfBirth"
+                value={newIdentity.dateOfBirth}
+                onChange={handleInputChange}
+              />
+            </label>
+            <br />
+            <button type="button" onClick={createIdentity}>
+              Create Identity
+            </button>
+          </form>
+
+          <button onClick={getIdentityDetails}>Get Identity Details</button>
+        </div>
+      )}
+
+      {identityDetails && (
+        <div>
+          <h2>Identity Details</h2>
+          <pre>{JSON.stringify(identityDetails, null, 2)}</pre>
+        </div>
+      )}
     </div>
   );
-}
+};
 
 export default App;
