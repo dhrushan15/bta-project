@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "C:\\Users\\Dhrushina\\OneDrive\\Documents\\BTA\\SmartContracts\\contracts\\IdentityManagement.sol": {
-      "lastModificationDate": 1700028786850,
-      "contentHash": "1d13a57d0c437953a806668a07b7f078",
+      "lastModificationDate": 1700480928785,
+      "contentHash": "9de47267f8ff4dddda1c9b9cba6a2345",
       "sourceName": "contracts/IdentityManagement.sol",
       "solcConfig": {
         "version": "0.8.0",
